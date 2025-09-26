@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>¿Cuántas palabras aprendimos sobre los Tundunchil?</title>
+
+  <style>
+    body {
+    font-family: "Arial Rounded MT Bold", sans-serif;
+    text-align: center;
+    background: linear-gradient(to right, #ffecd2, #fcb69f);
+    margin: 0;
+    padding: 20px;
+  }
+  h1 {
+    color: #333;
+    margin-bottom: 10px;
+  }
+  #wordList {
+    margin: 15px auto;
+    font-size: 18px;
+    font-weight: bold;
+    color: #444;
+  }
+  #gameBoard {
+    display: grid;
+    grid-template-columns: repeat(12, 40px);
+    grid-gap: 4px;
+    justify-content: center;
+    margin: 20px auto;
+    user-select: none;
+    touch-action: none;
+  }
+  .cell {
+    width: 40px;
+    height: 40px;
+    background: #fff;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .cell:hover {
+    background: #f1f1f1;
+  }
+  .selected {
+    background: #ffda77 !important;
+  }
+  .found {
+    background: #77dd77 !important;
+    color: white;
+  }
+  #controls {
+    margin-top: 20px;
+  }
+  button {
+    margin: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 12px;
+    background: #ff7b54;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button:hover {
+    background: #ff5400;
+  }
+  #feedback {
+    margin-top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+  }
+  .star {
+    color: gold;
+    font-size: 30px;
+  }
+  </style>
+
+  
+</head>
+<body>
+  <h1>¿Cuántas palabras aprendimos sobre los Tundunchil?</h1>
+<div id="wordList"></div>
+<div id="gameBoard"></div>
+
+<div id="controls">
+  <button onclick="startGame()">Iniciar Juego</button>
+  <button onclick="checkGame()">Verificar</button>
+  <button onclick="startGame()">Volver a Intentar</button>
+</div>
+
+<div id="feedback"></div>
+
+  <script>
+    const words = ["MAMADANZA","DANZANTE","PINKULLU","BOMBO","CASCABEL","CHUMPI","CUSHMA","INTI","ALFANJE","SOMBRERO"];
+const size = 12;
+let board = [];
+let selectedCells = [];
+let foundWords = [];
+
+function generateBoard() {
+  board = Array.from({ length: size }, () => Array(size).fill(""));
+  
+  words.forEach(word => {
+    let placed = false;
+    while (!placed) {
+      let dir = Math.floor(Math.random() * 2); // 0 horizontal, 1 vertical
+      let row = Math.floor(Math.random() * size);
+      let col = Math.floor(Math.random() * size);
+      if (dir === 0 && col + word.length <= size) {
+        if (board[row].slice(col, col + word.length).every(c => c === "")) {
+          for (let i = 0; i < word.length; i++) board[row][col + i] = word[i];
+          placed = true;
+        }
+      } else if (dir === 1 && row + word.length <= size) {
+        if (board.slice(row, row + word.length).every(r => r[col] === "")) {
+          for (let i = 0; i < word.length; i++) board[row + i][col] = word[i];
+          placed = true;
+        }
+      }
+    }
+  });
+
+  // letras de relleno
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (board[r][c] === "") {
+        board[r][c] = alphabet[Math.floor(Math.random() * alphabet.length)];
+      }
+    }
+  }
+}
+
+function renderBoard() {
+  const gameBoard = document.getElementById("gameBoard");
+  gameBoard.innerHTML = "";
+  gameBoard.style.gridTemplateColumns = `repeat(${size}, 40px)`;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      let cell = document.createElement("div");
+      cell.classList.add("cell");
+      cell.textContent = board[r][c];
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+
+      // Eventos PC
+      cell.addEventListener("mousedown", startDrag);
+      cell.addEventListener("mouseenter", dragOver);
+      cell.addEventListener("mouseup", endDrag);
+
+      // Eventos táctiles
+      cell.addEventListener("touchstart", (e) => { e.preventDefault(); startDrag(e); });
+      cell.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        let touch = e.touches[0];
+        let elem = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (elem && elem.classList.contains("cell")) dragOver({ target: elem });
+      });
+      cell.addEventListener("touchend", (e) => { e.preventDefault(); endDrag(); });
+
+      gameBoard.appendChild(cell);
+    }
+  }
+
+  // Mostrar lista de palabras arriba
+  document.getElementById("wordList").innerHTML = "Palabras: " + words.join(", ");
+}
+
+let dragging = false;
+function startDrag(e) {
+  dragging = true;
+  selectedCells = [];
+  selectCell(e.target);
+}
+function dragOver(e) {
+  if (dragging) selectCell(e.target);
+}
+function endDrag() {
+  dragging = false;
+  let selectedWord = selectedCells.map(c => c.textContent).join("");
+  if (words.includes(selectedWord) && !foundWords.includes(selectedWord)) {
+    foundWords.push(selectedWord);
+    selectedCells.forEach(c => c.classList.add("found"));
+  } else {
+    selectedCells.forEach(c => c.classList.remove("selected"));
+  }
+  selectedCells = [];
+}
+
+function selectCell(cell) {
+  if (!cell.classList.contains("selected") && !cell.classList.contains("found")) {
+    cell.classList.add("selected");
+    selectedCells.push(cell);
+  }
+}
+
+function checkGame() {
+  let feedback = document.getElementById("feedback");
+  let stars = "⭐".repeat(foundWords.length);
+  feedback.innerHTML = `Encontraste ${foundWords.length} de ${words.length} palabras<br>${stars}`;
+}
+
+function startGame() {
+  generateBoard();
+  renderBoard();
+  foundWords = [];
+  selectedCells = [];
+  document.getElementById("feedback").innerHTML = "";
+}
+startGame();
+  </script>
+</body>
+</html>
